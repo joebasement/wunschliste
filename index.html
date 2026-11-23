@@ -62,7 +62,7 @@ footer{color:var(--soft);font-size:15px;text-align:center}
   <div>
     <h1>Mahtab wird fünf</h1>
     <p class="lead">Weil so viele gefragt haben: hier ein paar Ideen, worüber sie sich freuen würde. Ganz ohne Muss.</p>
-    <p class="how">Such dir etwas aus, tipp auf „Das schenke ich“ und sag uns kurz Bescheid. Wir setzen dann hier das Häkchen, damit nichts doppelt kommt.</p>
+    <p class="how">Such dir etwas aus, tipp auf „Das schenke ich“ und trag deinen Namen ein. Dann bekommt es ein Häkchen und nichts kommt doppelt.</p>
   </div>
   <svg class="uni" viewBox="0 0 200 200" role="img" aria-label="Gezeichnetes Einhorn">
     <circle cx="100" cy="104" r="88" fill="#fff" opacity=".55"/>
@@ -83,6 +83,7 @@ footer{color:var(--soft);font-size:15px;text-align:center}
 
 <main class="band"><div class="wrap">
   <div class="filter"><p>Kleine Sachen machen ihr genauso viel Freude wie große.</p><button id="small" aria-pressed="false">Nur Kleinigkeiten zeigen</button></div>
+  <p id="err" class="msg" hidden>Die Häkchen konnten gerade nicht geladen werden. Bitte Seite später neu laden.</p>
   <div id="list"></div>
 </div></main>
 
@@ -92,6 +93,7 @@ footer{color:var(--soft);font-size:15px;text-align:center}
 {
 // ---- Hier pflegen: vergebene Sachen (id: "Name") ----
 const VERGEBEN = {
+  // Normalerweise leer lassen – Häkchen kommen aus dem Google-Formular.
   // einzelne Sachen:  "haarreif": "Oma",
   // "gern mehrere":   "pinsel": ["Oma", "Lisa"],
 };
@@ -128,6 +130,49 @@ const GRUPPEN = [
     ["buch-mobbing","Buch über Ausgrenzung, Hänseleien und Mobbing"]]}
 ];
 
+const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdlw3IWSpkfPoe8Cdlr8DUOMjt4Di346dZ-OVhlildL9WFu2w/formResponse';
+const F_ID = 'entry.264116791', F_NAME = 'entry.678036136';
+const CSV = 'https://docs.google.com/spreadsheets/d/1rlUYhjc743F5RvRuCWIs-_s6r-xpnf6487qZedPkIEk/gviz/tq?tqx=out:csv&gid=1944903936';
+let claims = {};   // id -> [Namen]
+
+function parseCSV(t) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"' && t[i+1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+function buildClaims(rows) {
+  const c = {};
+  for (const [id, n] of Object.entries(VERGEBEN)) c[id] = [].concat(n);
+  for (const r of rows.slice(1)) {
+    let id = (r[1] || '').trim(), n = (r[2] || '').trim() || 'jemand';
+    if (!id) continue;
+    if (id[0] === '-') { id = id.slice(1); const a = c[id] || [], i = a.indexOf(n); if (i > -1) a.splice(i, 1); }
+    else (c[id] = c[id] || []).push(n);
+  }
+  return c;
+}
+let loadOk = true;
+async function load() {
+  try {
+    const r = await fetch(CSV + '&t=' + Date.now());
+    if (!r.ok) throw 0;
+    claims = buildClaims(parseCSV(await r.text())); loadOk = true;
+  } catch (e) { loadOk = false; claims = buildClaims([]); }
+  document.getElementById('err').hidden = loadOk;
+}
+function send(id, name) {
+  const b = new URLSearchParams(); b.append(F_ID, id); b.append(F_NAME, name);
+  return fetch(FORM, {method: 'POST', mode: 'no-cors', body: b});
+}
+
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let mine = {};
 try { mine = JSON.parse(localStorage.getItem('mahtab-mine') || '{}'); } catch(e) {}
@@ -140,30 +185,27 @@ const text = (id, wer) => `Hallo ihr beiden, ich schenke Mahtab zum Geburtstag: 
 function itemHTML([id, name, f = '']) {
   const multi = f.includes('m'), small = f.includes('k');
   if (onlySmall && !small) return '';
-  const v = VERGEBEN[id], names = multi ? [].concat(v || []) : [];
-  const taken = !multi && v;
-  const isMine = mine[id];
+  const names = claims[id] || [];
+  const isMine = mine[id] && names.includes(mine[id]);
+  const taken = !multi && names.length && !isMine;
   const cls = taken ? 'taken' : isMine ? 'mine' : '';
   const box = `<span class="box" aria-hidden="true">${taken || isMine ? '&#10003;' : ''}</span>`;
   let right;
   if (taken) right = `<span class="status">schon vergeben</span>`;
   else if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
   else right = `<button class="main" data-pick="${id}" aria-expanded="${open===id}">Das schenke ich</button>`;
+  if (multi && isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
   const tags = (small ? '<span class="tag k">Kleinigkeit</span>' : '') + (multi ? '<span class="tag">gern auch mehrere</span>' : '');
-  const who = names.length ? `<span class="who">schon dabei: ${names.length}&times;</span>` : '';
+  const who = multi && names.length ? `<span class="who">schon ${names.length}&times; gewählt</span>` : '';
   let panel = '';
   if (open === id && !taken) {
     const wer = mine._name || '';
-    panel = `<div class="panel">
-      <label for="wer-${id}">Dein Name (damit wir wissen, von wem)</label>
-      <input id="wer-${id}" value="${esc(wer)}" autocomplete="name" placeholder="z. B. Tante Lisa">
-      <div class="acts">
-        <a class="btn" data-wa="${id}" href="#" target="_blank" rel="noopener">Per WhatsApp Bescheid geben</a>
-        <button data-copy="${id}">Text kopieren</button>
-        <button data-close="1">Abbrechen</button>
-      </div>
-      <p class="msg" id="msg-${id}">Wir setzen dann das Häkchen, damit nichts doppelt kommt.</p>
-    </div>`;
+    panel = `<form class="panel" data-form="${id}">
+      <label for="wer-${id}">Dein Name</label>
+      <input id="wer-${id}" value="${esc(wer)}" autocomplete="name" placeholder="z. B. Tante Lisa" required maxlength="40">
+      <div class="acts"><button class="main" type="submit">Eintragen</button><button type="button" data-close="1">Abbrechen</button></div>
+      <p class="msg" id="msg-${id}">Dann bekommt es für alle ein Häkchen. Nur wir sehen deinen Namen.</p>
+    </form>`;
   }
   return `<li class="${cls}"><div class="row">${box}<span class="name">${esc(name)}<span class="tags">${tags}${who}</span></span>${right}</div>${panel}</li>`;
 }
@@ -171,34 +213,39 @@ function itemHTML([id, name, f = '']) {
 const root = document.getElementById('list');
 function render() {
   root.innerHTML = GRUPPEN.map(g => { const li = g.items.map(itemHTML).join(''); return li ? `<section><h2>${esc(g.t)}</h2>${g.hint ? `<p class="hint">${esc(g.hint)}</p>` : ''}<ul>${li}</ul></section>` : ''; }).join('');
-  if (open) { const i = document.getElementById('wer-' + open); if (i) { i.focus(); syncWa(open); } }
+  if (open) { const i = document.getElementById('wer-' + open); if (i) { i.focus(); } }
 }
-function syncWa(id) {
-  const i = document.getElementById('wer-' + id), a = root.querySelector(`[data-wa="${id}"]`);
-  if (a && i) a.href = 'https://wa.me/?text=' + encodeURIComponent(text(id, i.value.trim()));
-}
-function confirmPick(id) {
-  const i = document.getElementById('wer-' + id);
-  mine[id] = 1; mine._name = i ? i.value.trim() : ''; save();
-}
-
-root.addEventListener('input', e => { if (e.target.id && e.target.id.startsWith('wer-')) syncWa(e.target.id.slice(4)); });
+root.addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = e.target.dataset.form, name = document.getElementById('wer-' + id).value.trim(), m = document.getElementById('msg-' + id);
+  if (!name) return;
+  const multi = GRUPPEN.flatMap(g => g.items).find(x => x[0] === id)[2]?.includes('m');
+  m.textContent = 'Einen Moment …';
+  await load();
+  if (!multi && (claims[id] || []).length) { m.textContent = 'Oh, das hat gerade jemand anderes gewählt. Such dir gern etwas anderes aus.'; setTimeout(() => { open = null; render(); }, 2500); return; }
+  try { await send(id, name); } catch (err) { m.textContent = 'Das hat nicht geklappt. Bitte gleich nochmal versuchen.'; return; }
+  mine[id] = name; mine._name = name; save();
+  (claims[id] = claims[id] || []).push(name);
+  open = null; render();
+});
 root.addEventListener('click', async e => {
-  const b = e.target.closest('[data-pick],[data-undo],[data-copy],[data-close],[data-wa]');
+  const b = e.target.closest('[data-pick],[data-undo],[data-close]');
   if (!b) return;
   if (b.dataset.pick) { open = b.dataset.pick; render(); }
   else if (b.dataset.close) { open = null; render(); }
-  else if (b.dataset.undo) { delete mine[b.dataset.undo]; save(); render(); }
-  else if (b.dataset.wa) { syncWa(b.dataset.wa); confirmPick(b.dataset.wa); setTimeout(() => { open = null; render(); }, 400); }
-  else if (b.dataset.copy) {
-    const id = b.dataset.copy, i = document.getElementById('wer-' + id), m = document.getElementById('msg-' + id);
-    try { await navigator.clipboard.writeText(text(id, i.value.trim())); m.textContent = 'Kopiert. Jetzt einfach an uns schicken.'; confirmPick(id); }
-    catch(err) { m.textContent = 'Kopieren ging nicht. Schreib uns einfach: ' + text(id, i.value.trim()); }
+  else if (b.dataset.undo) {
+    const id = b.dataset.undo, name = mine[id];
+    b.disabled = true;
+    try { await send('-' + id, name); } catch (err) {}
+    const a = claims[id] || [], i = a.indexOf(name); if (i > -1) a.splice(i, 1);
+    delete mine[id]; save(); render();
   }
 });
 const sw = document.getElementById('small');
 sw.addEventListener('click', () => { onlySmall = !onlySmall; sw.setAttribute('aria-pressed', onlySmall); sw.textContent = onlySmall ? 'Alle Ideen zeigen' : 'Nur Kleinigkeiten zeigen'; render(); });
 render();
+load().then(render);
+setInterval(() => { if (!open) load().then(render); }, 60000);
 }
 </script>
 </body>
