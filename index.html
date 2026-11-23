@@ -28,16 +28,15 @@ h2{font:600 24px/1.2 Fredoka,system-ui,sans-serif;margin:0 0 4px}
 .lead{margin:0;max-width:60ch}
 .how{margin:14px 0 0;font-size:15px;color:var(--soft)}
 svg.uni{width:100%;height:auto;display:block}
-section{margin-top:34px}
+section{margin-top:34px}section:first-child{margin-top:0}
 .hint{margin:0 0 12px;color:var(--soft);font-size:15px}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 li{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:14px 16px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .name{flex:1 1 200px;font-weight:600}
-.tags{display:block}.tag,.who{display:inline-block;font-size:13px;font-weight:700;color:var(--gold);margin-right:10px;white-space:nowrap}.tag.k{color:var(--ok)}.who{color:var(--soft)}
+.tags{display:block}.tag,.who{display:inline-block;font-size:13px;font-weight:700;color:var(--gold);margin-right:10px;white-space:nowrap}.who{color:var(--soft)}
 .box{flex:none;width:28px;height:28px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--bg)}
 li.taken .box{background:var(--soft);border-color:var(--soft)}li.mine .box{background:var(--ok);border-color:var(--ok)}
-.filter{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:12px 16px}.filter p{margin:0;font-weight:600}
 button[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:var(--bg)}
 button{font:700 15px Nunito,system-ui,sans-serif;min-height:44px;padding:0 16px;border-radius:999px;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
 button.main{background:var(--ink);color:var(--bg)}
@@ -82,7 +81,6 @@ footer{color:var(--soft);font-size:15px;text-align:center}
 </div></header>
 
 <main class="band"><div class="wrap">
-  <div class="filter"><p>Kleine Sachen machen ihr genauso viel Freude wie große.</p><button id="small" aria-pressed="false">Nur Kleinigkeiten zeigen</button></div>
   <p id="err" class="msg" hidden>Die Häkchen konnten gerade nicht geladen werden. Bitte Seite später neu laden.</p>
   <div id="list"></div>
 </div></main>
@@ -98,36 +96,36 @@ const VERGEBEN = {
   // "gern mehrere":   "pinsel": ["Oma", "Lisa"],
 };
 
-// k = Kleinigkeit (ca. 5 Euro), m = gern auch mehrere
+// m = gern auch mehrere
 const GRUPPEN = [
-  {t:"Einhörner und Accessoires", items:[
+  {t:"Mahtabs Wunschliste", items:[
     ["leuchteinhorn","Leuchtendes Einhorn"],
     ["shirt","Buntes Einhorn-T-Shirt oder Poloshirt mit Glitzer"],
-    ["haarreif","Einhorn-Haarreif","k"],
-    ["nagellack","Einhorn-Nagellack-Set für Kinder","k"],
-    ["kette","Einhorn-Halskette","k"],
-    ["armband","Einhorn-Armband","k"],
-    ["schmuck","Weiterer Einhorn-Schmuck","km"],
-    ["sticker","Einhorn- oder Glitzer-Sticker","km"],
-    ["spangen","Haarspangen oder Haargummis mit Glitzer","km"]]},
-  {t:"Kleidung und Winter", items:[
+    ["haarreif","Einhorn-Haarreif"],
+    ["nagellack","Einhorn-Nagellack-Set für Kinder"],
+    ["kette","Einhorn-Halskette"],
+    ["armband","Einhorn-Armband"],
+    ["schmuck","Weiterer Einhorn-Schmuck","m"],
+    ["sticker","Einhorn- oder Glitzer-Sticker","m"],
+    ["spangen","Haarspangen oder Haargummis mit Glitzer","m"],
     ["rock","Rock mit Blumen-, Schmetterlings-, Feen-, Meerjungfrauen- oder Kirschmotiv","m"],
     ["glitzer","Kleidung mit Sternen, Glitzer oder goldenen Pailletten","m"],
     ["muetze","Wintermütze"],
-    ["handschuhe","Wasserdichte Winterhandschuhe, am liebsten mit Einhornmotiv"]]},
-  {t:"Kreativ sein und basteln", items:[
-    ["clay","Lufttrocknende Modelliermasse (Air-Dry Clay)","km"],
-    ["pinsel","Pinsel zum Malen und Basteln","km"],
-    ["papier","Glitzer- oder Tonpapier zum Basteln","km"]]},
-  {t:"Kleine Schätze", items:[
+    ["handschuhe","Wasserdichte Winterhandschuhe, am liebsten mit Einhornmotiv"],
     ["schatzkiste","Schatzkiste oder Schmuckkästchen für ihre kleinen Schätze"],
     ["brille","Brille (keine Sonnenbrille)"],
-    ["etui","Brillenetui oder Brillenbox mit Einhorn- oder Meerjungfrauenmotiv","k"]]},
-  {t:"Bücher", hint:"Bilderbücher für 5 bis 6 Jahre, am liebsten liebevoll illustriert und mit einer spannenden, kindgerechten Geschichte.", items:[
-    ["buch-grenzen","Buch über persönliche Grenzen und Nein-Sagen"],
-    ["buch-selbst","Buch über Selbstbewusstsein und Selbstvertrauen"],
-    ["buch-freund","Buch über Freundschaft und Zusammenhalt"],
-    ["buch-mobbing","Buch über Ausgrenzung, Hänseleien und Mobbing"]]}
+    ["etui","Brillenetui oder Brillenbox mit Einhorn- oder Meerjungfrauenmotiv"],
+    ["tonie","Tonie-Figur","m"]]},
+  {t:"Wünsche, die wir Eltern besonders unterstützen", items:[
+    ["pinsel","Pinsel für Wasserfarben","m"],
+    ["clay","Lufttrocknende Modelliermasse (Air-Dry Clay)","m"],
+    ["papier","Glitzer- oder Tonpapier zum Basteln","m"],
+    ["sperrholz","Sperrholzplatte für die Laubsäge","m"],
+    ["stoffstifte","Filzstifte für Stoff","m"],
+    ["springseil","Springseil"],
+    ["haarbuerste","Haarbürste","m"],
+    ["buch-lesen","Bücher zum Selberlesen","m"],
+    ["buch-vorlesen","Bücher zum Vorlesen","m"]]}
 ];
 
 const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdlw3IWSpkfPoe8Cdlr8DUOMjt4Di346dZ-OVhlildL9WFu2w/formResponse';
@@ -178,13 +176,12 @@ let mine = {};
 try { mine = JSON.parse(localStorage.getItem('mahtab-mine') || '{}'); } catch(e) {}
 const save = () => { try { localStorage.setItem('mahtab-mine', JSON.stringify(mine)); } catch(e) {} };
 const label = {}; GRUPPEN.forEach(g => g.items.forEach(([id, n]) => label[id] = n));
-let open = null, onlySmall = false;
+let open = null;
 
 const text = (id, wer) => `Hallo ihr beiden, ich schenke Mahtab zum Geburtstag: ${label[id]}.` + (wer ? ` Liebe Grüße, ${wer}` : '');
 
 function itemHTML([id, name, f = '']) {
-  const multi = f.includes('m'), small = f.includes('k');
-  if (onlySmall && !small) return '';
+  const multi = f.includes('m');
   const names = claims[id] || [];
   const isMine = mine[id] && names.includes(mine[id]);
   const taken = !multi && names.length && !isMine;
@@ -195,7 +192,7 @@ function itemHTML([id, name, f = '']) {
   else if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
   else right = `<button class="main" data-pick="${id}" aria-expanded="${open===id}">Das schenke ich</button>`;
   if (multi && isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
-  const tags = (small ? '<span class="tag k">Kleinigkeit</span>' : '') + (multi ? '<span class="tag">gern auch mehrere</span>' : '');
+  const tags = multi ? '<span class="tag">gern auch mehrere</span>' : '';
   const who = multi && names.length ? `<span class="who">schon ${names.length}&times; gewählt</span>` : '';
   let panel = '';
   if (open === id && !taken) {
@@ -241,8 +238,6 @@ root.addEventListener('click', async e => {
     delete mine[id]; save(); render();
   }
 });
-const sw = document.getElementById('small');
-sw.addEventListener('click', () => { onlySmall = !onlySmall; sw.setAttribute('aria-pressed', onlySmall); sw.textContent = onlySmall ? 'Alle Ideen zeigen' : 'Nur Kleinigkeiten zeigen'; render(); });
 render();
 load().then(render);
 setInterval(() => { if (!open) load().then(render); }, 60000);
