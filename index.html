@@ -137,7 +137,7 @@ async function load() {
     const r = await timed(CSV + '&t=' + Date.now(), {credentials: 'omit'});
     if (!r.ok) throw 0;
     const c = {};
-    for (const line of (await r.text()).split('\n').slice(1)) {
+    for (const line of (await r.text()).split('\n')) {
       const m = line.match(/^"[^"]*","(-?)([a-z-]+)"/);
       if (!m || m[2] === 'test') continue;
       c[m[2]] = Math.max(0, (c[m[2]] || 0) + (m[1] ? -1 : 1));
