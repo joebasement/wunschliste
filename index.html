@@ -126,28 +126,30 @@ const GRUPPEN = [
     ["buch-vorlesen","Bücher zum Vorlesen","m"]]}
 ];
 
-// Speicher: 3 Zähler bei abacus.jasoncameron.dev, je Wunsch 5 Bit (0–31).
-// Reihenfolge NIE ändern – neue Wünsche nur hinten anhängen (max. 27).
-const SLOTS = ["leuchteinhorn","shirt","haarreif","nagellack","kette","armband","schmuck","sticker","spangen",
-  "rock","glitzer","muetze","handschuhe","schatzkiste","brille","etui","tonie","pinsel",
-  "clay","papier","sperrholz","stoffstifte","springseil","haarbuerste","buch-lesen","buch-vorlesen"];
-const API = 'https://abacus.jasoncameron.dev', NS = 'mahtab5-x7q2k9';
-const KEYS = [['cnt0','ffcb5fb1-9684-45ed-9598-fa4af82f7ce9'],['cnt1','0b1f5acb-52a7-4fbf-8b59-f321c29db821'],['cnt2','c9f944ab-151b-4e89-92fc-fc9a1fbb6943']];
-const vals = [0, 0, 0];
-const slot = id => { const i = SLOTS.indexOf(id); return [Math.floor(i / 9), 32 ** (i % 9)]; };
-const count = id => { const [c, u] = slot(id); return Math.floor(vals[c] / u) % 32; };
+// Speicher: Google-Formular (schreiben) + zugehörige Tabelle (lesen). Jede Zeile = ein Klick ("id" oder "-id" für Zurück).
+const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdlw3IWSpkfPoe8Cdlr8DUOMjt4Di346dZ-OVhlildL9WFu2w/formResponse';
+const CSV = 'https://docs.google.com/spreadsheets/d/1rlUYhjc743F5RvRuCWIs-_s6r-xpnf6487qZedPkIEk/gviz/tq?tqx=out:csv&gid=1944903936';
+let counts = {};
+const count = id => counts[id] || 0;
+const timed = (url, opt = {}) => { const c = new AbortController(); setTimeout(() => c.abort(), 8000); return fetch(url, {...opt, signal: c.signal}); };
 async function load() {
   try {
-    const r = await Promise.all(KEYS.map(([k]) => fetch(`${API}/get/${NS}/${k}`).then(x => { if (!x.ok) throw 0; return x.json(); })));
-    r.forEach((j, i) => vals[i] = j.value);
+    const r = await timed(CSV + '&t=' + Date.now(), {credentials: 'omit'});
+    if (!r.ok) throw 0;
+    const c = {};
+    for (const line of (await r.text()).split('\n').slice(1)) {
+      const m = line.match(/^"[^"]*","(-?)([a-z-]+)"/);
+      if (!m || m[2] === 'test') continue;
+      c[m[2]] = Math.max(0, (c[m[2]] || 0) + (m[1] ? -1 : 1));
+    }
+    counts = c;
     document.getElementById('err').hidden = true;
   } catch (e) { document.getElementById('err').hidden = false; throw e; }
 }
 async function change(id, dir) {
-  const [c, u] = slot(id);
-  const r = await fetch(`${API}/update/${NS}/${KEYS[c][0]}?value=${dir * u}`, {method: 'POST', headers: {Authorization: 'Bearer ' + KEYS[c][1]}});
-  if (!r.ok) throw 0;
-  vals[c] = (await r.json()).value;
+  const b = new URLSearchParams(); b.append('entry.264116791', (dir < 0 ? '-' : '') + id);
+  await timed(FORM, {method: 'POST', mode: 'no-cors', body: b});
+  counts[id] = Math.max(0, count(id) + dir);
 }
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -176,7 +178,6 @@ function itemHTML([id, name]) {
   let right;
   if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
   else if (taken) right = `<span class="status">schon vergeben</span>`;
-  else if (n >= 30) right = `<span class="status">genug davon</span>`;
   else right = `<button class="main" data-pick="${id}">Das schenke ich</button>`;
   const tags = multi ? `<span class="tags"><span class="tag">gern auch mehrere</span>${n ? tally(n) : ''}</span>` : '';
   return `<li class="${cls}"><div class="row"><span class="name"><span class="txt">${esc(name)}</span>${tags}</span>${right}</div></li>`;
@@ -209,7 +210,7 @@ root.addEventListener('click', async e => {
 });
 render();
 load().then(render, () => {});
-setInterval(() => { if (!busy) load().then(render, () => {}); }, 60000);
+setInterval(() => { if (!busy) load().then(render, () => {}); }, 30000);
 }
 </script>
 </body>
