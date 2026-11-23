@@ -23,7 +23,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 Nunito,syst
 .wrap{max-width:1160px;margin:0 auto}
 #list{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
 @media(max-width:860px){#list{grid-template-columns:1fr}}
-#list section{margin-top:0}
+#list section{margin-top:0;scroll-margin-top:16px}
+.toc{display:none;margin-top:16px;gap:8px;flex-direction:column}.toc a{display:flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:14px;background:var(--card);color:var(--ink);font-weight:700;text-decoration:none;border:1.5px solid var(--line)}.toc a::after{content:'↓';margin-left:auto;padding-left:10px}
+@media(max-width:860px){.toc{display:flex}}
 header{background:var(--field)}
 .top{display:grid;grid-template-columns:minmax(0,1fr) 190px;max-width:900px;gap:24px;align-items:center}
 h1{font:600 clamp(34px,6vw,50px)/1.05 Fredoka,system-ui,sans-serif;margin:0 0 12px;text-wrap:balance}
@@ -64,7 +66,7 @@ footer{color:var(--soft);font-size:15px;text-align:center}
   <div>
     <h1>Mahtab wird fünf</h1>
     <p class="lead">Weil so viele gefragt haben: hier ein paar Ideen, worüber sie sich freuen würde. Ganz ohne Muss.</p>
-    <p class="how">Such dir etwas aus und tipp auf „Das schenke ich“. Einzelne Sachen werden dann durchgestrichen, bei allem anderen kommt ein Strich auf die Strichliste.</p>
+    <nav class="toc" aria-label="Inhalt"><a href="#wunschliste">Mahtabs Wunschliste</a><a href="#eltern">Wünsche, die wir Eltern besonders unterstützen</a></nav>
   </div>
   <svg class="uni" viewBox="0 0 200 200" role="img" aria-label="Gezeichnetes Einhorn">
     <circle cx="100" cy="104" r="88" fill="#fff" opacity=".55"/>
@@ -89,13 +91,12 @@ footer{color:var(--soft);font-size:15px;text-align:center}
   <div id="list"></div>
 </div></main>
 
-<footer class="band"><div class="wrap">Danke, dass ihr an Mahtab denkt. Am meisten freut sie sich, wenn ihr da seid.</div></footer>
 
 <script>
 {
 // m = gern auch mehrere
 const GRUPPEN = [
-  {t:"Mahtabs Wunschliste", items:[
+  {id:"wunschliste", t:"Mahtabs Wunschliste", items:[
     ["leuchteinhorn","Leuchtendes Einhorn"],
     ["shirt","Buntes Einhorn-T-Shirt oder Poloshirt mit Glitzer"],
     ["haarreif","Einhorn-Haarreif"],
@@ -113,7 +114,7 @@ const GRUPPEN = [
     ["brille","Brille (keine Sonnenbrille)"],
     ["etui","Brillenetui oder Brillenbox mit Einhorn- oder Meerjungfrauenmotiv"],
     ["tonie","Tonie-Figur","m"]]},
-  {t:"Wünsche, die wir Eltern besonders unterstützen", items:[
+  {id:"eltern", t:"Wünsche, die wir Eltern besonders unterstützen", items:[
     ["pinsel","Pinsel für Wasserfarben","m"],
     ["clay","Lufttrocknende Modelliermasse (Air-Dry Clay)","m"],
     ["papier","Glitzer- oder Tonpapier zum Basteln","m"],
@@ -183,7 +184,7 @@ function itemHTML([id, name]) {
 
 const root = document.getElementById('list'), note = document.getElementById('note');
 function render() {
-  root.innerHTML = GRUPPEN.map(g => `<section><h2>${esc(g.t)}</h2><ul>${g.items.map(itemHTML).join('')}</ul></section>`).join('');
+  root.innerHTML = GRUPPEN.map(g => `<section id="${g.id}"><h2>${esc(g.t)}</h2><ul>${g.items.map(itemHTML).join('')}</ul></section>`).join('');
 }
 const say = t => { note.textContent = t; note.hidden = !t; };
 
