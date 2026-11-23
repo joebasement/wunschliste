@@ -38,14 +38,14 @@ li{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padd
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .name{flex:1 1 200px;font-weight:600}
 .tags{display:block}.tag,.who{display:inline-block;font-size:13px;font-weight:700;color:var(--gold);margin-right:10px;white-space:nowrap}.who{color:var(--soft)}
-.box{flex:none;width:28px;height:28px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--bg)}
-li.taken .box{background:var(--soft);border-color:var(--soft)}li.mine .box{background:var(--ok);border-color:var(--ok)}
 button[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:var(--bg)}
 button{font:700 15px Nunito,system-ui,sans-serif;min-height:44px;padding:0 16px;border-radius:999px;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
 button.main{background:var(--ink);color:var(--bg)}
 button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-li.taken{opacity:.55;border-style:dashed}
-li.taken .name{text-decoration:line-through}
+li.taken{border-style:dashed}li.taken .txt{text-decoration:line-through;text-decoration-thickness:2px;opacity:.55}
+.tally{display:inline-flex;gap:4px;vertical-align:middle}.tally svg{stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}
+.note{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:var(--field);color:var(--ink);font-weight:600}
+button:disabled{opacity:.5}
 .status{font-size:14px;font-weight:700;color:var(--soft);white-space:nowrap}
 li.mine{border-color:var(--ok)}li.mine .status{color:var(--ok)}
 .panel{margin-top:12px;padding-top:12px;border-top:1.5px dashed var(--line);display:grid;gap:10px}
@@ -64,7 +64,7 @@ footer{color:var(--soft);font-size:15px;text-align:center}
   <div>
     <h1>Mahtab wird fünf</h1>
     <p class="lead">Weil so viele gefragt haben: hier ein paar Ideen, worüber sie sich freuen würde. Ganz ohne Muss.</p>
-    <p class="how">Such dir etwas aus, tipp auf „Das schenke ich“ und trag deinen Namen ein. Dann bekommt es ein Häkchen und nichts kommt doppelt.</p>
+    <p class="how">Such dir etwas aus und tipp auf „Das schenke ich“. Einzelne Sachen werden dann durchgestrichen, bei allem anderen kommt ein Strich auf die Strichliste.</p>
   </div>
   <svg class="uni" viewBox="0 0 200 200" role="img" aria-label="Gezeichnetes Einhorn">
     <circle cx="100" cy="104" r="88" fill="#fff" opacity=".55"/>
@@ -84,7 +84,8 @@ footer{color:var(--soft);font-size:15px;text-align:center}
 </div></header>
 
 <main class="band"><div class="wrap">
-  <p id="err" class="msg" hidden>Die Häkchen konnten gerade nicht geladen werden. Bitte Seite später neu laden.</p>
+  <p id="err" class="msg" hidden>Der aktuelle Stand konnte gerade nicht geladen werden. Bitte Seite später neu laden.</p>
+  <p id="note" class="msg note" role="status" hidden></p>
   <div id="list"></div>
 </div></main>
 
@@ -92,13 +93,6 @@ footer{color:var(--soft);font-size:15px;text-align:center}
 
 <script>
 {
-// ---- Hier pflegen: vergebene Sachen (id: "Name") ----
-const VERGEBEN = {
-  // Normalerweise leer lassen – Häkchen kommen aus dem Google-Formular.
-  // einzelne Sachen:  "haarreif": "Oma",
-  // "gern mehrere":   "pinsel": ["Oma", "Lisa"],
-};
-
 // m = gern auch mehrere
 const GRUPPEN = [
   {t:"Mahtabs Wunschliste", items:[
@@ -131,119 +125,90 @@ const GRUPPEN = [
     ["buch-vorlesen","Bücher zum Vorlesen","m"]]}
 ];
 
-const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdlw3IWSpkfPoe8Cdlr8DUOMjt4Di346dZ-OVhlildL9WFu2w/formResponse';
-const F_ID = 'entry.264116791', F_NAME = 'entry.678036136';
-const CSV = 'https://docs.google.com/spreadsheets/d/1rlUYhjc743F5RvRuCWIs-_s6r-xpnf6487qZedPkIEk/gviz/tq?tqx=out:csv&gid=1944903936';
-let claims = {};   // id -> [Namen]
-
-function parseCSV(t) {
-  const rows = []; let row = [], f = '', q = false;
-  for (let i = 0; i < t.length; i++) {
-    const c = t[i];
-    if (q) { if (c === '"' && t[i+1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; }
-    else if (c === '"') q = true;
-    else if (c === ',') { row.push(f); f = ''; }
-    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
-    else if (c !== '\r') f += c;
-  }
-  if (f || row.length) { row.push(f); rows.push(row); }
-  return rows;
-}
-function buildClaims(rows) {
-  const c = {};
-  for (const [id, n] of Object.entries(VERGEBEN)) c[id] = [].concat(n);
-  for (const r of rows.slice(1)) {
-    let id = (r[1] || '').trim(), n = (r[2] || '').trim() || 'jemand';
-    if (!id) continue;
-    if (id[0] === '-') { id = id.slice(1); const a = c[id] || [], i = a.indexOf(n); if (i > -1) a.splice(i, 1); }
-    else (c[id] = c[id] || []).push(n);
-  }
-  return c;
-}
-let loadOk = true;
+// Speicher: 3 Zähler bei abacus.jasoncameron.dev, je Wunsch 5 Bit (0–31).
+// Reihenfolge NIE ändern – neue Wünsche nur hinten anhängen (max. 27).
+const SLOTS = ["leuchteinhorn","shirt","haarreif","nagellack","kette","armband","schmuck","sticker","spangen",
+  "rock","glitzer","muetze","handschuhe","schatzkiste","brille","etui","tonie","pinsel",
+  "clay","papier","sperrholz","stoffstifte","springseil","haarbuerste","buch-lesen","buch-vorlesen"];
+const API = 'https://abacus.jasoncameron.dev', NS = 'mahtab5-x7q2k9';
+const KEYS = [['cnt0','ffcb5fb1-9684-45ed-9598-fa4af82f7ce9'],['cnt1','0b1f5acb-52a7-4fbf-8b59-f321c29db821'],['cnt2','c9f944ab-151b-4e89-92fc-fc9a1fbb6943']];
+const vals = [0, 0, 0];
+const slot = id => { const i = SLOTS.indexOf(id); return [Math.floor(i / 9), 32 ** (i % 9)]; };
+const count = id => { const [c, u] = slot(id); return Math.floor(vals[c] / u) % 32; };
 async function load() {
   try {
-    const r = await fetch(CSV + '&t=' + Date.now());
-    if (!r.ok) throw 0;
-    claims = buildClaims(parseCSV(await r.text())); loadOk = true;
-  } catch (e) { loadOk = false; claims = buildClaims([]); }
-  document.getElementById('err').hidden = loadOk;
+    const r = await Promise.all(KEYS.map(([k]) => fetch(`${API}/get/${NS}/${k}`).then(x => { if (!x.ok) throw 0; return x.json(); })));
+    r.forEach((j, i) => vals[i] = j.value);
+    document.getElementById('err').hidden = true;
+  } catch (e) { document.getElementById('err').hidden = false; throw e; }
 }
-function send(id, name) {
-  const b = new URLSearchParams(); b.append(F_ID, id); b.append(F_NAME, name);
-  return fetch(FORM, {method: 'POST', mode: 'no-cors', body: b});
+async function change(id, dir) {
+  const [c, u] = slot(id);
+  const r = await fetch(`${API}/update/${NS}/${KEYS[c][0]}?value=${dir * u}`, {method: 'POST', headers: {Authorization: 'Bearer ' + KEYS[c][1]}});
+  if (!r.ok) throw 0;
+  vals[c] = (await r.json()).value;
 }
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let mine = {};
-try { mine = JSON.parse(localStorage.getItem('mahtab-mine') || '{}'); } catch(e) {}
-const save = () => { try { localStorage.setItem('mahtab-mine', JSON.stringify(mine)); } catch(e) {} };
-const label = {}; GRUPPEN.forEach(g => g.items.forEach(([id, n]) => label[id] = n));
-let open = null;
+try { mine = JSON.parse(localStorage.getItem('mahtab-mine2') || '{}'); } catch(e) {}
+const save = () => { try { localStorage.setItem('mahtab-mine2', JSON.stringify(mine)); } catch(e) {} };
+const isMulti = {}; GRUPPEN.forEach(g => g.items.forEach(([id, , f = '']) => isMulti[id] = f.includes('m')));
+let busy = false;
 
-const text = (id, wer) => `Hallo ihr beiden, ich schenke Mahtab zum Geburtstag: ${label[id]}.` + (wer ? ` Liebe Grüße, ${wer}` : '');
+function tally(n) {
+  let h = '';
+  for (let g = 0; g < n; g += 5) {
+    const k = Math.min(5, n - g), w = 30;
+    let l = '';
+    for (let i = 0; i < Math.min(k, 4); i++) l += `<line x1="${4 + i * 7}" y1="3" x2="${4 + i * 7}" y2="21"/>`;
+    if (k === 5) l += '<line x1="1" y1="18" x2="28" y2="6"/>';
+    h += `<svg viewBox="0 0 ${w} 24" width="${w}" height="24">${l}</svg>`;
+  }
+  return `<span class="tally" role="img" aria-label="${n} mal gewählt">${h}</span>`;
+}
 
-function itemHTML([id, name, f = '']) {
-  const multi = f.includes('m');
-  const names = claims[id] || [];
-  const isMine = mine[id] && names.includes(mine[id]);
-  const taken = !multi && names.length && !isMine;
-  const cls = taken ? 'taken' : isMine ? 'mine' : '';
-  const box = `<span class="box" aria-hidden="true">${taken || isMine ? '&#10003;' : ''}</span>`;
+function itemHTML([id, name]) {
+  const multi = isMulti[id], n = count(id), isMine = !!mine[id];
+  const taken = !multi && n > 0;
+  const cls = taken ? (isMine ? 'taken mine' : 'taken') : isMine ? 'mine' : '';
   let right;
-  if (taken) right = `<span class="status">schon vergeben</span>`;
-  else if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
-  else right = `<button class="main" data-pick="${id}" aria-expanded="${open===id}">Das schenke ich</button>`;
-  if (multi && isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
-  const tags = multi ? '<span class="tag">gern auch mehrere</span>' : '';
-  const who = multi && names.length ? `<span class="who">schon ${names.length}&times; gewählt</span>` : '';
-  let panel = '';
-  if (open === id && !taken) {
-    const wer = mine._name || '';
-    panel = `<form class="panel" data-form="${id}">
-      <label for="wer-${id}">Dein Name</label>
-      <input id="wer-${id}" value="${esc(wer)}" autocomplete="name" placeholder="z. B. Tante Lisa" required maxlength="40">
-      <div class="acts"><button class="main" type="submit">Eintragen</button><button type="button" data-close="1">Abbrechen</button></div>
-      <p class="msg" id="msg-${id}">Dann bekommt es für alle ein Häkchen. Nur wir sehen deinen Namen.</p>
-    </form>`;
-  }
-  return `<li class="${cls}"><div class="row">${box}<span class="name">${esc(name)}<span class="tags">${tags}${who}</span></span>${right}</div>${panel}</li>`;
+  if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
+  else if (taken) right = `<span class="status">schon vergeben</span>`;
+  else if (n >= 30) right = `<span class="status">genug davon</span>`;
+  else right = `<button class="main" data-pick="${id}">Das schenke ich</button>`;
+  const tags = multi ? `<span class="tags"><span class="tag">gern auch mehrere</span>${n ? tally(n) : ''}</span>` : '';
+  return `<li class="${cls}"><div class="row"><span class="name"><span class="txt">${esc(name)}</span>${tags}</span>${right}</div></li>`;
 }
 
-const root = document.getElementById('list');
+const root = document.getElementById('list'), note = document.getElementById('note');
 function render() {
-  root.innerHTML = GRUPPEN.map(g => { const li = g.items.map(itemHTML).join(''); return li ? `<section><h2>${esc(g.t)}</h2>${g.hint ? `<p class="hint">${esc(g.hint)}</p>` : ''}<ul>${li}</ul></section>` : ''; }).join('');
-  if (open) { const i = document.getElementById('wer-' + open); if (i) { i.focus(); } }
+  root.innerHTML = GRUPPEN.map(g => `<section><h2>${esc(g.t)}</h2><ul>${g.items.map(itemHTML).join('')}</ul></section>`).join('');
 }
-root.addEventListener('submit', async e => {
-  e.preventDefault();
-  const id = e.target.dataset.form, name = document.getElementById('wer-' + id).value.trim(), m = document.getElementById('msg-' + id);
-  if (!name) return;
-  const multi = GRUPPEN.flatMap(g => g.items).find(x => x[0] === id)[2]?.includes('m');
-  m.textContent = 'Einen Moment …';
-  await load();
-  if (!multi && (claims[id] || []).length) { m.textContent = 'Oh, das hat gerade jemand anderes gewählt. Such dir gern etwas anderes aus.'; setTimeout(() => { open = null; render(); }, 2500); return; }
-  try { await send(id, name); } catch (err) { m.textContent = 'Das hat nicht geklappt. Bitte gleich nochmal versuchen.'; return; }
-  mine[id] = name; mine._name = name; save();
-  (claims[id] = claims[id] || []).push(name);
-  open = null; render();
-});
+const say = t => { note.textContent = t; note.hidden = !t; };
+
 root.addEventListener('click', async e => {
-  const b = e.target.closest('[data-pick],[data-undo],[data-close]');
-  if (!b) return;
-  if (b.dataset.pick) { open = b.dataset.pick; render(); }
-  else if (b.dataset.close) { open = null; render(); }
-  else if (b.dataset.undo) {
-    const id = b.dataset.undo, name = mine[id];
-    b.disabled = true;
-    try { await send('-' + id, name); } catch (err) {}
-    const a = claims[id] || [], i = a.indexOf(name); if (i > -1) a.splice(i, 1);
-    delete mine[id]; save(); render();
-  }
+  const b = e.target.closest('[data-pick],[data-undo]');
+  if (!b || busy) return;
+  busy = true; b.disabled = true; say('');
+  try {
+    if (b.dataset.pick) {
+      const id = b.dataset.pick;
+      await load();
+      if (!isMulti[id] && count(id) > 0) say('Das hat gerade jemand anderes gewählt. Such dir gern etwas anderes aus.');
+      else { await change(id, 1); mine[id] = 1; save(); }
+    } else {
+      const id = b.dataset.undo;
+      await load();
+      if (count(id) > 0) await change(id, -1);
+      delete mine[id]; save();
+    }
+  } catch (err) { say('Das hat gerade nicht geklappt. Bitte gleich nochmal versuchen.'); }
+  busy = false; render();
 });
 render();
-load().then(render);
-setInterval(() => { if (!open) load().then(render); }, 60000);
+load().then(render, () => {});
+setInterval(() => { if (!busy) load().then(render, () => {}); }, 60000);
 }
 </script>
 </body>
