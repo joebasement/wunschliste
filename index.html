@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mahtabs Wunschliste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm, leise, kindlich – eine Hilfe, kein Bestellformular
+   IDEA: ein Bogen Glitzer-Sticker; vergebene Sticker sind "abgezogen"
+   PICTURE: gezeichnetes Einhorn auf rosa Feld, darunter die Liste selbst
+   COLOUR and TYPE: Rosa-Feld, tiefes Pflaumen-Ink, Gold als Akzent; Fredoka + Nunito
+   LAYOUT: eine ruhige Spalte, Gruppen als Kartenreihen, mobil zuerst */
+:root{color-scheme:light dark;
+--bg:light-dark(#fff7fa,#1d1420);--field:light-dark(#ffd9e8,#3a2140);--card:light-dark(#ffffff,#2a1c2f);
+--ink:light-dark(#3b1838,#fbe9f2);--soft:light-dark(#7d5577,#cfa9c6);--gold:light-dark(#c98a12,#f3c25a);
+--line:light-dark(#f2cadb,#4a2f4f);--ok:light-dark(#2f7a5b,#8fe0b9)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 Nunito,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:760px;margin:0 auto}
+header{background:var(--field)}
+.top{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:24px;align-items:center}
+h1{font:600 clamp(34px,6vw,50px)/1.05 Fredoka,system-ui,sans-serif;margin:0 0 12px;text-wrap:balance}
+h2{font:600 24px/1.2 Fredoka,system-ui,sans-serif;margin:0 0 4px}
+.lead{margin:0;max-width:60ch}
+.how{margin:14px 0 0;font-size:15px;color:var(--soft)}
+svg.uni{width:100%;height:auto;display:block}
+section{margin-top:34px}
+.hint{margin:0 0 12px;color:var(--soft);font-size:15px}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+li{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:14px 16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.name{flex:1 1 200px;font-weight:600}
+.tags{display:block}.tag,.who{display:inline-block;font-size:13px;font-weight:700;color:var(--gold);margin-right:10px;white-space:nowrap}.tag.k{color:var(--ok)}.who{color:var(--soft)}
+.box{flex:none;width:28px;height:28px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--bg)}
+li.taken .box{background:var(--soft);border-color:var(--soft)}li.mine .box{background:var(--ok);border-color:var(--ok)}
+.filter{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:12px 16px}.filter p{margin:0;font-weight:600}
+button[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+button{font:700 15px Nunito,system-ui,sans-serif;min-height:44px;padding:0 16px;border-radius:999px;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+button.main{background:var(--ink);color:var(--bg)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+li.taken{opacity:.55;border-style:dashed}
+li.taken .name{text-decoration:line-through}
+.status{font-size:14px;font-weight:700;color:var(--soft);white-space:nowrap}
+li.mine{border-color:var(--ok)}li.mine .status{color:var(--ok)}
+.panel{margin-top:12px;padding-top:12px;border-top:1.5px dashed var(--line);display:grid;gap:10px}
+.panel label{font-size:14px;color:var(--soft)}
+input{font:16px Nunito,system-ui,sans-serif;width:100%;min-height:44px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+a.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px;text-decoration:none}
+.msg{font-size:14px;color:var(--soft);margin:0}
+footer{color:var(--soft);font-size:15px;text-align:center}
+@media(max-width:600px){.top{grid-template-columns:1fr}.top svg{max-width:170px;margin:0 auto;order:-1}}
+@media(prefers-reduced-motion:no-preference){.spark{animation:tw 2.4s ease-in-out infinite}.spark:nth-of-type(2){animation-delay:.8s}.spark:nth-of-type(3){animation-delay:1.6s}@keyframes tw{50%{opacity:.25}}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap top">
+  <div>
+    <h1>Mahtab wird fünf</h1>
+    <p class="lead">Weil so viele gefragt haben: hier ein paar Ideen, worüber sie sich freuen würde. Ganz ohne Muss.</p>
+    <p class="how">Such dir etwas aus, tipp auf „Das schenke ich“ und sag uns kurz Bescheid. Wir setzen dann hier das Häkchen, damit nichts doppelt kommt.</p>
+  </div>
+  <svg class="uni" viewBox="0 0 200 200" role="img" aria-label="Gezeichnetes Einhorn">
+    <circle cx="100" cy="104" r="88" fill="#fff" opacity=".55"/>
+    <path d="M118 30 L104 78 L126 82 Z" fill="#f3c25a" stroke="#c98a12" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M110 56l12 3M107 67l15 3" stroke="#c98a12" stroke-width="2"/>
+    <path d="M70 92c0-22 20-32 42-28 26 5 40 30 38 56-2 22-10 40-20 52H70c-8-18-10-36 0-48z" fill="#fff" stroke="#3b1838" stroke-width="3"/>
+    <ellipse cx="128" cy="140" rx="22" ry="17" fill="#ffd9e8" stroke="#3b1838" stroke-width="3"/>
+    <circle cx="122" cy="138" r="2.6" fill="#3b1838"/><circle cx="134" cy="138" r="2.6" fill="#3b1838"/>
+    <path d="M104 106q8 7 16 0" fill="none" stroke="#3b1838" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="98" cy="122" r="7" fill="#ffb3cf"/>
+    <path d="M86 78l-8-16 18 8" fill="#fff" stroke="#3b1838" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M72 74c-26 6-34 34-24 60 8 22 6 34 0 40 22-2 30-20 26-40" fill="#c9a7ff" stroke="#3b1838" stroke-width="3"/>
+    <path d="M80 72c-14 14-16 36-6 56" fill="none" stroke="#ff8fbf" stroke-width="8" stroke-linecap="round"/>
+    <path d="M88 70c-6 12-6 26 0 38" fill="none" stroke="#8fd6ff" stroke-width="7" stroke-linecap="round"/>
+    <g fill="#f3c25a"><path class="spark" d="M160 46l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path class="spark" d="M36 50l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path class="spark" d="M168 150l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></g>
+  </svg>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div class="filter"><p>Kleine Sachen machen ihr genauso viel Freude wie große.</p><button id="small" aria-pressed="false">Nur Kleinigkeiten zeigen</button></div>
+  <div id="list"></div>
+</div></main>
+
+<footer class="band"><div class="wrap">Danke, dass ihr an Mahtab denkt. Am meisten freut sie sich, wenn ihr da seid.</div></footer>
+
+<script>
+{
+// ---- Hier pflegen: vergebene Sachen (id: "Name") ----
+const VERGEBEN = {
+  // einzelne Sachen:  "haarreif": "Oma",
+  // "gern mehrere":   "pinsel": ["Oma", "Lisa"],
+};
+
+// k = Kleinigkeit (ca. 5 Euro), m = gern auch mehrere
+const GRUPPEN = [
+  {t:"Einhörner und Accessoires", items:[
+    ["leuchteinhorn","Leuchtendes Einhorn"],
+    ["shirt","Buntes Einhorn-T-Shirt oder Poloshirt mit Glitzer"],
+    ["haarreif","Einhorn-Haarreif","k"],
+    ["nagellack","Einhorn-Nagellack-Set für Kinder","k"],
+    ["kette","Einhorn-Halskette","k"],
+    ["armband","Einhorn-Armband","k"],
+    ["schmuck","Weiterer Einhorn-Schmuck","km"],
+    ["sticker","Einhorn- oder Glitzer-Sticker","km"],
+    ["spangen","Haarspangen oder Haargummis mit Glitzer","km"]]},
+  {t:"Kleidung und Winter", items:[
+    ["rock","Rock mit Blumen-, Schmetterlings-, Feen-, Meerjungfrauen- oder Kirschmotiv","m"],
+    ["glitzer","Kleidung mit Sternen, Glitzer oder goldenen Pailletten","m"],
+    ["muetze","Wintermütze"],
+    ["handschuhe","Wasserdichte Winterhandschuhe, am liebsten mit Einhornmotiv"]]},
+  {t:"Kreativ sein und basteln", items:[
+    ["clay","Lufttrocknende Modelliermasse (Air-Dry Clay)","km"],
+    ["pinsel","Pinsel zum Malen und Basteln","km"],
+    ["papier","Glitzer- oder Tonpapier zum Basteln","km"]]},
+  {t:"Kleine Schätze", items:[
+    ["schatzkiste","Schatzkiste oder Schmuckkästchen für ihre kleinen Schätze"],
+    ["brille","Brille (keine Sonnenbrille)"],
+    ["etui","Brillenetui oder Brillenbox mit Einhorn- oder Meerjungfrauenmotiv","k"]]},
+  {t:"Bücher", hint:"Bilderbücher für 5 bis 6 Jahre, am liebsten liebevoll illustriert und mit einer spannenden, kindgerechten Geschichte.", items:[
+    ["buch-grenzen","Buch über persönliche Grenzen und Nein-Sagen"],
+    ["buch-selbst","Buch über Selbstbewusstsein und Selbstvertrauen"],
+    ["buch-freund","Buch über Freundschaft und Zusammenhalt"],
+    ["buch-mobbing","Buch über Ausgrenzung, Hänseleien und Mobbing"]]}
+];
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let mine = {};
+try { mine = JSON.parse(localStorage.getItem('mahtab-mine') || '{}'); } catch(e) {}
+const save = () => { try { localStorage.setItem('mahtab-mine', JSON.stringify(mine)); } catch(e) {} };
+const label = {}; GRUPPEN.forEach(g => g.items.forEach(([id, n]) => label[id] = n));
+let open = null, onlySmall = false;
+
+const text = (id, wer) => `Hallo ihr beiden, ich schenke Mahtab zum Geburtstag: ${label[id]}.` + (wer ? ` Liebe Grüße, ${wer}` : '');
+
+function itemHTML([id, name, f = '']) {
+  const multi = f.includes('m'), small = f.includes('k');
+  if (onlySmall && !small) return '';
+  const v = VERGEBEN[id], names = multi ? [].concat(v || []) : [];
+  const taken = !multi && v;
+  const isMine = mine[id];
+  const cls = taken ? 'taken' : isMine ? 'mine' : '';
+  const box = `<span class="box" aria-hidden="true">${taken || isMine ? '&#10003;' : ''}</span>`;
+  let right;
+  if (taken) right = `<span class="status">schon vergeben</span>`;
+  else if (isMine) right = `<span class="status">von dir gewählt</span><button data-undo="${id}">Zurück</button>`;
+  else right = `<button class="main" data-pick="${id}" aria-expanded="${open===id}">Das schenke ich</button>`;
+  const tags = (small ? '<span class="tag k">Kleinigkeit</span>' : '') + (multi ? '<span class="tag">gern auch mehrere</span>' : '');
+  const who = names.length ? `<span class="who">schon dabei: ${names.length}&times;</span>` : '';
+  let panel = '';
+  if (open === id && !taken) {
+    const wer = mine._name || '';
+    panel = `<div class="panel">
+      <label for="wer-${id}">Dein Name (damit wir wissen, von wem)</label>
+      <input id="wer-${id}" value="${esc(wer)}" autocomplete="name" placeholder="z. B. Tante Lisa">
+      <div class="acts">
+        <a class="btn" data-wa="${id}" href="#" target="_blank" rel="noopener">Per WhatsApp Bescheid geben</a>
+        <button data-copy="${id}">Text kopieren</button>
+        <button data-close="1">Abbrechen</button>
+      </div>
+      <p class="msg" id="msg-${id}">Wir setzen dann das Häkchen, damit nichts doppelt kommt.</p>
+    </div>`;
+  }
+  return `<li class="${cls}"><div class="row">${box}<span class="name">${esc(name)}<span class="tags">${tags}${who}</span></span>${right}</div>${panel}</li>`;
+}
+
+const root = document.getElementById('list');
+function render() {
+  root.innerHTML = GRUPPEN.map(g => { const li = g.items.map(itemHTML).join(''); return li ? `<section><h2>${esc(g.t)}</h2>${g.hint ? `<p class="hint">${esc(g.hint)}</p>` : ''}<ul>${li}</ul></section>` : ''; }).join('');
+  if (open) { const i = document.getElementById('wer-' + open); if (i) { i.focus(); syncWa(open); } }
+}
+function syncWa(id) {
+  const i = document.getElementById('wer-' + id), a = root.querySelector(`[data-wa="${id}"]`);
+  if (a && i) a.href = 'https://wa.me/?text=' + encodeURIComponent(text(id, i.value.trim()));
+}
+function confirmPick(id) {
+  const i = document.getElementById('wer-' + id);
+  mine[id] = 1; mine._name = i ? i.value.trim() : ''; save();
+}
+
+root.addEventListener('input', e => { if (e.target.id && e.target.id.startsWith('wer-')) syncWa(e.target.id.slice(4)); });
+root.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pick],[data-undo],[data-copy],[data-close],[data-wa]');
+  if (!b) return;
+  if (b.dataset.pick) { open = b.dataset.pick; render(); }
+  else if (b.dataset.close) { open = null; render(); }
+  else if (b.dataset.undo) { delete mine[b.dataset.undo]; save(); render(); }
+  else if (b.dataset.wa) { syncWa(b.dataset.wa); confirmPick(b.dataset.wa); setTimeout(() => { open = null; render(); }, 400); }
+  else if (b.dataset.copy) {
+    const id = b.dataset.copy, i = document.getElementById('wer-' + id), m = document.getElementById('msg-' + id);
+    try { await navigator.clipboard.writeText(text(id, i.value.trim())); m.textContent = 'Kopiert. Jetzt einfach an uns schicken.'; confirmPick(id); }
+    catch(err) { m.textContent = 'Kopieren ging nicht. Schreib uns einfach: ' + text(id, i.value.trim()); }
+  }
+});
+const sw = document.getElementById('small');
+sw.addEventListener('click', () => { onlySmall = !onlySmall; sw.setAttribute('aria-pressed', onlySmall); sw.textContent = onlySmall ? 'Alle Ideen zeigen' : 'Nur Kleinigkeiten zeigen'; render(); });
+render();
+}
+</script>
+</body>
+</html>
